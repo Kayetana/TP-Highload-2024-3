@@ -188,7 +188,7 @@ _**Сетевой трафик**_
 ### Расположение датацентров
 
 На карте отражено распределение месячной аудитории Твиттера по странам. [[9]](https://worldpopulationreview.com/country-rankings/twitter-users-by-country)
-![TwitterUsers.png](images/TwitterUsers.png)
+![DataCenters.jpg](images/DataCenters.jpg)
 
 Месячная аудитория Твиттера составляет примерно 528.3 млн пользователей со всех континентов.
 
