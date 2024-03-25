@@ -242,7 +242,7 @@ Kubernetes выполняет auto-scaling, перезапускает серв�
 
 ## 5. Логическая схема БД
 
-![dbScheme](images/dbScheme.png)
+![dbScheme](images/dbScheme2.png)
 
 ### Размер данных
 
@@ -252,21 +252,59 @@ Kubernetes выполняет auto-scaling, перезапускает серв�
 - date = 4 байта
 - timestamp = 8 байт
 - varchar(n) = n байт
-- будем считать, что url медиафайла в среднем равен 50 байтам
 - текст твита = ~200 байт
 - название тега = ~20 байт
 
-| Таблица      | Размер записи в байтах                          |
-|:-------------|:------------------------------------------------|
-| User         | 16 + 15 + 128 + 64 + 50 + 4 = 277               |
-| User_session | 16 + 16 + 8 = 40                                |
-| Followers    | 16 + 16 = 32                                    |
-| Tweet        | 8 + 16 + 8 + 200 + 16 + 4 + 4 + 4 + 4 + 8 = 272 |
-| Like         | 8 + 16 = 24                                     |
-| Retweet      | 8 + 16 = 24                                     |
-| Tag          | 8 + 20 = 28                                     |
-| Tag_tweet    | 8 + 8 = 16                                      |
-| Media        | 8 + 50 = 58                                     |
+## 5. Физическая схема БД
+
+### Выбор СУБД
+
+|    | Таблица          | СУБД      |
+|:---|:-----------------|-----------|
+| 1  | User             | Cassandra |
+| 2  | User_aggregated  | Cassandra |
+| 3  | User_session     | Redis     |
+| 4  | Followings       | FlockDB   |
+| 5  | Like             | HDFS      |
+| 6  | User_tweet       | HDFS      |
+| 7  | View             | HDFS      |
+| 8  | Recommendations  | Aerospike |
+| 9  | Tweet            | Cassandra |
+| 10 | Tweet_aggregated | Cassandra |
+| 11 | Hashtag          | Cassandra |
+| 12 | Photo_metadata   | Cassandra |
+| 13 | Video_metadata   | Cassandra |
+| 14 | Photo            | S3        |
+| 15 | Video            | S3        |
+
+
+### Шардирование
+- User
+- User_aggregated
+- User_session
+- Like
+- User_tweet
+- View
+- Recommendations
+- Tweet
+- Tweet_aggregated
+- Photo_metadata
+- Video_metadata
+- Hashtag
+
+### Репликация
+
+Каждый шард будет реплицироваться по типу Master-Slave.
+
+### Индексы
+
+- User: hash по id, b-tree по name
+- User_aggregated: hash по id
+- Tweet: hash по id
+- Tweet_aggregated: hash по id
+- Hashtag: hash по id, b-tree по name
+- Photo_metadata: hash по id
+- Video_metadata: hash по id
 
 
 ## Источники
