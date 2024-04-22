@@ -290,57 +290,47 @@ Kubernetes выполняет auto-scaling, перезапускает серв�
 
 ### Выбор СУБД
 
-|    | Таблица          | СУБД       |
-|:---|:-----------------|------------|
-| 1  | User             | Cassandra  |
-| 2  | User_aggregated  | ClickHouse |
-| 3  | User_session     | Redis      |
-| 4  | Followings       | FlockDB    |
-| 5  | Like             | Aerospike  |
-| 6  | User_tweet       | Aerospike  |
-| 7  | Retweet          | Aerospike  |
-| 8  | View             | Aerospike  |
-| 9  | Tweet            | Cassandra  |
-| 10 | Tweet_aggregated | ClickHouse |
-| 11 | Hashtag          | Cassandra  |
-| 12 | Photo_metadata   | Cassandra  |
-| 13 | Video_metadata   | Cassandra  |
-| 14 | Photo            | S3         |
-| 15 | Video            | S3         |
+|    | Таблица            | СУБД          |
+|:---|:-------------------|---------------|
+| 1  | User               | Cassandra     |
+| 2  | User_name_index    | Elasticsearch |
+| 3  | User_aggregated    | ClickHouse    |
+| 4  | User_session       | Redis         |
+| 5  | Followings         | FlockDB       |
+| 6  | User_actions       | Aerospike     |
+| 7  | Tweet              | Cassandra     |
+| 8  | Tweet_aggregated   | ClickHouse    |
+| 9  | Hashtag            | Cassandra     |
+| 10 | Hashtag_name_index | Elasticsearch |
+| 11 | Photo_metadata     | Cassandra     |
+| 12 | Video_metadata     | Cassandra     |
+| 13 | Photo              | S3            |
+| 14 | Video              | S3            |
 
 
 ### Шардирование и репликация
 
-Ниже перечислены таблицы, которые будут шардироваться. Репликация будет настроена для всех шардов.  
+Ниже перечислены таблицы, которые будут шардироваться. Для всех шардов будет настроена репликация.  
 В качестве коэффициента репликации (Replication Factor, RF) выбраны значения,
 рекомендуемые в документации используемых СУБД.   
 
-|    | Таблица          | Поле       | СУБД       | RF | Тип репликации | 
-|----|:-----------------|------------|------------|----|----------------|
-| 1  | User             | id         | Cassandra  | 3  | Masterless     |
-| 2  | User_aggregated  | id         | ClickHouse | 3  | Multi-Master   |
-| 3  | User_session     | session_id | Redis      | 2  | Master - Slave |
-| 4  | Like             | id         | Aerospike  | 2  | Master - Slave |
-| 5  | User_tweet       | id         | Aerospike  | 2  | Master - Slave |
-| 6  | Retweet          | id         | Aerospike  | 2  | Master - Slave |
-| 7  | View             | id         | Aerospike  | 2  | Master - Slave |
-| 8  | Tweet            | tweet_id   | Cassandra  | 3  | Masterless     |
-| 9  | Tweet_aggregated | tweet_id   | ClickHouse | 3  | Multi-Master   |
-| 10 | Photo_metadata   | id         | Cassandra  | 3  | Masterless     |
-| 11 | Video_metadata   | id         | Cassandra  | 3  | Masterless     |
+|   | Таблица          | Поле       | СУБД       | RF | Тип репликации | 
+|---|:-----------------|------------|------------|----|----------------|
+| 1 | User             | id         | Cassandra  | 3  | Masterless     |
+| 2 | User_aggregated  | id         | ClickHouse | 3  | Multi-Master   |
+| 3 | User_session     | session_id | Redis      | 2  | Master - Slave |
+| 4 | User_actions     | user_id    | Aerospike  | 2  | Master - Slave |
+| 5 | Tweet            | tweet_id   | Cassandra  | 3  | Masterless     |
+| 6 | Tweet_aggregated | id         | ClickHouse | 3  | Multi-Master   |
+| 7 | Photo_metadata   | id         | Cassandra  | 3  | Masterless     |
+| 8 | Video_metadata   | id         | Cassandra  | 3  | Masterless     |
 
 ### Индексы
 
-В Кассандре можно создать вторичный индекс, но он создается отдельно для данных на каждой ноде.  
-Если создать вторичный индекс, например, по имени пользователя, то при выполнении поиска придется считывать индекс с множества нод.
-
-Эффективнее использовать дополнительные инструменты. Поэтому для таблиц User и Hashtag будут созданы индексы в Elasticsearch.
-
-| Таблица | Поле | Индекс              |
-|:--------|------|---------------------|
-| User    | name | Elasticsearch index |
-| Hashtag | name | Elasticsearch index |
-
+| Таблица            | Поле | Индекс              |
+|:-------------------|------|---------------------|
+| User_name_index    | name | Elasticsearch index |
+| Hashtag_name_index | name | Elasticsearch index |
 
 ## 7. Алгоритмы
 
