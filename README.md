@@ -581,6 +581,8 @@ Kubernetes выполняет auto-scaling, перезапускает серв�
 | Redis         | Собственный | 8 CPU Cores / 2×8 GB RAM / 2x250 GB SSD / 2 x 1 Gb/s LAN ports   | 6 500 $      |
 
 
+```k8s node * 210 = 11 330 $ * 210 = 2 380 000 $```
+
 ## Источники
 1. https://datareportal.com/essential-twitter-stats
 2. https://www.demandsage.com/twitter-statistics/
