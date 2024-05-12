@@ -456,11 +456,11 @@ CNN хорошо подходят для распознавания образо
 
 - Backend For Frontend
 - CQRS
-- Синхронизация БД
 - Outbox
 
-Рассмотрим отдельно некоторые части схемы.
+Рассмотрим некоторые части схемы отдельно.
 
+#### 1 часть
 ![UserService](images/UserService.png)
 
 CQRS:
@@ -486,7 +486,7 @@ CQRS:
 - Сервис User Worker читает это сообщение с помощью двух консьюмер-групп и параллельно вносит изменения в базы данных.
 Один консьюмер обновляет граф подписок в FlockDB, а второй - изменяет счетчики подписчиков и подписок в ClickHouse
 
-
+#### 2 часть
 ![TweetService](images/TweetService.png)
 
 CQRS:
@@ -496,12 +496,12 @@ CQRS:
 - Сервис Search синхронно читает названия хештегов из Elasticsearch
 
 Outbox:
-- Сервис Tweet Worker записывает новый твит в Cassandra tweets.
+- Сервис Tweet Worker записывает новый твит в Cassandra tweets
 - Сервис Outbox Processor читает id твита и найденные в нем хештеги из Cassandra tweets и записывает в Kafka
 - Сервис Hashtag Worker читает это сообщение из Kafka и записывает в Cassandra hashtags
 
 Синхронизация БД:
-- Сервис Hashtags to ES синхронизирует Cassandra и Elasticsearch - добавляет в индекс новые хештеги.
+- Сервис Hashtags to ES синхронизирует Cassandra и Elasticsearch - добавляет в индекс новые хештеги
 - Сервис S3 Cleaner удаляет из S3 ненужные фото и видео
 
 Примеры работы сервисов:
@@ -520,11 +520,14 @@ Outbox:
 - Сервис Hashtags to ES читает название хештега из Cassandra hashtags и добавляет в индекс Elasticsearch,
   чтобы пользователь стал доступен для поиска
 
+#### 3 часть
 ![SupportService](images/SupportService.png)
 
 Пользователи могут пожаловаться на определенные твиты.
-Сервис Moderation будет асинхронно проверять эти твиты.
+Сервис Moderation будет асинхронно проверять эти твиты и записывать запрещенные твиты в YT Banned.  
 Модерация была описана в разделе [Модерация контента](#модерация-контента).
+
+#### 4 часть
 
 ![Recommendation](images/Recommendation.png)
 
@@ -535,6 +538,8 @@ Outbox:
 - Сервис Feed получает ленту от Recommender
 - Возможет вариант, когда Feed ходит в FlockDB и Cassandra для составления ленты по упрощенной логике.
 Этот процесс будет описан в следующем разделе
+
+#### 5 часть
 
 ![MetricsAndLogs](images/MetricsAndLogs.png)
 
@@ -584,8 +589,7 @@ Outbox:
 
 #### Support 
 
-- POST /report_tweet/{id}
-- POST /report_user/{id}
+- POST /report/{id}
 
 
 ## 10. Обеспечение надежности
