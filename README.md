@@ -450,7 +450,7 @@ CNN хорошо подходят для распознавания образо
 
 ## 9. Схема проекта
 
-![ServicesScheme](images/ServicesScheme.png)
+![FullScheme](images/FullScheme.png)
 
 ### Паттерны
 
@@ -461,16 +461,16 @@ CNN хорошо подходят для распознавания образо
 Рассмотрим некоторые части схемы отдельно.
 
 #### 1 часть
-![UserService](images/UserService.png)
+![Part1](images/Part1.png)
 
 CQRS:
-- Запись в ClickHouse, FlockDB, Cassandra, Elasticsearch происходит асинхронно
-- Сервис User синхронно читает данные пользователя из Cassandra,
-количество подписчиков и подписок из ClickHouse, связи между пользователями из FlockDB
-- Сервис Search синхронно читает имена пользователей из Elasticsearch
+- Асинхронная запись в ClickHouse, FlockDB, Cassandra и Elasticsearch
+- Сервис Subscribers читает граф подписок в FlockDB
+- Сервис User читает данные пользователя из Cassandra и счетчики подписчиков и подписок из ClickHouse
+- Сервис Search читает имена пользователей из Elasticsearch
 
 Синхронизация БД:
-- Сервис Usernames to ES синхронизирует Cassandra и Elasticsearch -
+- Сервис Usernames to ES синхронизирует Cassandra и Elasticsearch:
 добавляет имена пользователей в индекс, обновляет и удаляет из индекса.
 
 Примеры работы сервисов:
@@ -482,18 +482,18 @@ CQRS:
 чтобы пользователь стал доступен для поиска
 
 2. Подписка одного пользователя на другого
-- Сервис User записывает id пользователей в топик Kafka
-- Сервис User Worker читает это сообщение с помощью двух консьюмер-групп и параллельно вносит изменения в базы данных.
+- Сервис Subscribers записывает id пользователей в топик Kafka
+- Сервис Subscribers Worker читает это сообщение с помощью двух консьюмер-групп и параллельно вносит изменения в базы данных.
 Один консьюмер обновляет граф подписок в FlockDB, а второй - изменяет счетчики подписчиков и подписок в ClickHouse
 
 #### 2 часть
-![TweetService](images/TweetService.png)
+![Part2](images/Part2.png)
 
 CQRS:
-- Запись в Cassandra, ClickHouse, Aerospike, Elasticsearch происходит асинхронно
-- Сервис Tweet синхронно читает данные твитов из Cassandra и статистику по твитам из ClickHouse
-- Сервис Hashtag синхронно читает хештеги и твиты по этим хештегам из Cassandra
-- Сервис Search синхронно читает названия хештегов из Elasticsearch
+- Асинхронная запись в Cassandra, ClickHouse, Aerospike и Elasticsearch
+- Сервис Tweet читает твиты из Cassandra и статистику по твитам из ClickHouse
+- Сервис Hashtag читает хештеги и твиты по этим хештегам из Cassandra
+- Сервис Search читает названия хештегов из Elasticsearch
 
 Outbox:
 - Сервис Tweet Worker записывает новый твит в Cassandra tweets
@@ -516,20 +516,29 @@ Outbox:
 - Сервис Tweet кладет данные твита в топик tweet_info.
 Данные включают текст, найденные в тексте хештеги, ссылки на файлы и т.д.
 - Сервис Tweet Worker читает это сообщение и записывает данные в Cassandra tweets
-- С помощью паттерна Outbox хештеги и твит записываются в Cassandra hashtags
+- С помощью паттерна Outbox хештеги записываются в Cassandra hashtags
 - Сервис Hashtags to ES читает название хештега из Cassandra hashtags и добавляет в индекс Elasticsearch,
-  чтобы пользователь стал доступен для поиска
+чтобы хештег стал доступен для поиска
 
 #### 3 часть
-![SupportService](images/SupportService.png)
+![Part3](images/Part3.png)
 
-Пользователи могут пожаловаться на определенные твиты.
-Сервис Moderation будет асинхронно проверять эти твиты и записывать запрещенные твиты в YT Banned.  
-Модерация была описана в разделе [Модерация контента](#модерация-контента).
+- Сервис Support получает жалобы пользователей на твиты и записывает их в Kafka
+- Сервис Moderation читает сообщения из Kafka и принимает решения
+с помощью S3 Models, Postgres Keyword list и Postgres Banned.
+Не прошедшие проверку твиты записываются в Kafka
+- Сервис Tweet Cleaner удаляет твиты из Cassandra tweets
+- Postgres Keyword list содержит список запрещенных слов, которые не должны быть в твитах
+- S3 Training data содержит обучающие данные
+- Human Support представляет собой группу специалистов, которые:
+  - добавляют новые слова в S3 Keyword lists
+  - поддерживают актуальность обучающих данных в S3 Training Data
+  - загружают в YT Banned твиты с банами
+- Сервис Model Training периодически переобучает модели в S3 Models
 
 #### 4 часть
 
-![Recommendation](images/Recommendation.png)
+![Part4](images/Part4.png)
 
 - Сервис ML Worker периодически запускается, создает эмбеддинги и записывает их в Chroma
 - Сервис Data Collector собирает все данные, необходимые для составления рекомендаций.
@@ -560,10 +569,14 @@ Outbox:
 - POST /login
 - POST /logout
 - POST /sign_up
+- PUT /update
+- GET /user/{user_id}
+
+#### Subscribers
+
 - POST /follow/{user_id}
 - GET /followers/{user_id}
 - GET /followings/{user_id}
-- GET /user/{user_id}
 
 #### Tweet
 
@@ -802,15 +815,15 @@ Recommender составляет ленту на основе данных, по
 
 | Сервис        | Хостинг     | Конфигурация                               | Кол-во машин         | Покупка 1 шт на 5 лет | Аренда 1 шт на 5 лет | 
 |:--------------|-------------|--------------------------------------------|----------------------|-----------------------|----------------------|
-| k8s node      | Собственный | 64 CPU Cores / 4×16 GB RAM / 2x240 GB SSD  | 1 325                | 11 800 $              | ~24 000 $            |
-| Redis         | Собственный | 16 CPU Cores / 4×16 GB RAM / 2x240 GB SSD  | 1 * 2 RF * 5 ДЦ = 10 | 6 500 $               | ~20 000 $            |
-| Chroma        | Собственный | 16 CPU Cores / 4×16 GB RAM / 2x240 GB SSD  | 1 * 5 ДЦ = 5         | 6 500 $               | ~20 000 $            |
-| Elasticsearch | Собственный | 16 CPU Cores / 4×64 GB RAM / 2x960 GB SSD  | 1 * 5 ДЦ = 5         | 7 800 $               | ~10 000 $            |
-| ClickHouse    | Собственный | 16 CPU Cores / 4×64 GB RAM / 4x1.9 TB SSD  | 1 * 3 RF * 5 ДЦ = 15 | 9 000 $               | ~10 000 $            |
-| Cassandra     | Собственный | 16 CPU Cores / 4×64 GB RAM / 4x7.6 TB SSD  | 2 * 3 RF * 5 ДЦ = 30 | 11 000 $              | ~16 000 $            |
-| Aerospike     | Собственный | 16 CPU Cores / 4×64 GB RAM / 10x7.6 TB SSD | 8 * 2 RF * 5 ДЦ = 80 | 17 000 $              | ~20 000 $            |
-| FlockDB       | Собственный | 16 CPU Cores / 4×64 GB RAM / 10x7.6 TB SSD | 8 * 5 ДЦ = 40        | 17 000 $              | ~20 000 $            |
-| S3            | Amazon      | 280 Пб                                     | -                    | -                     | ~68 100 000 $        |
+| k8s node      | Собственный | 64 CPU Cores / 4×16 GB RAM / 2x240 GB SSD  | 1 325                | 11 800 $              | 24 000 $             |
+| Redis         | Собственный | 16 CPU Cores / 4×16 GB RAM / 2x240 GB SSD  | 1 * 2 RF * 5 ДЦ = 10 | 6 500 $               | 20 000 $             |
+| Chroma        | Собственный | 16 CPU Cores / 4×16 GB RAM / 2x240 GB SSD  | 1 * 5 ДЦ = 5         | 6 500 $               | 20 000 $             |
+| Elasticsearch | Собственный | 16 CPU Cores / 4×64 GB RAM / 2x960 GB SSD  | 1 * 5 ДЦ = 5         | 7 800 $               | 10 000 $             |
+| ClickHouse    | Собственный | 16 CPU Cores / 4×64 GB RAM / 4x1.9 TB SSD  | 1 * 3 RF * 5 ДЦ = 15 | 9 000 $               | 10 000 $             |
+| Cassandra     | Собственный | 16 CPU Cores / 4×64 GB RAM / 4x7.6 TB SSD  | 2 * 3 RF * 5 ДЦ = 30 | 11 000 $              | 16 000 $             |
+| Aerospike     | Собственный | 16 CPU Cores / 4×64 GB RAM / 10x7.6 TB SSD | 8 * 2 RF * 5 ДЦ = 80 | 17 000 $              | 20 000 $             |
+| FlockDB       | Собственный | 16 CPU Cores / 4×64 GB RAM / 10x7.6 TB SSD | 8 * 5 ДЦ = 40        | 17 000 $              | 20 000 $             |
+| S3            | Amazon      | 280 Пб                                     | -                    | -                     | 68 100 000 $         |
 
 
 11800 * 1325 + 6500 * 10 + 6500 * 5 + 7800 * 5 + 9000 * 15 + 11000 * 30 + 17000 * 80 + 17000 * 40 + 68 100 000 = 86 376 500 $  
